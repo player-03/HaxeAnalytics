@@ -24,21 +24,26 @@ class Timestamp {
 	}
 	
 	public static function fromLocal(localDate:Date):String {
-		//I must be using makeUtc() wrong, because it shifts the date in
-		//the wrong direction. However, it shifts it by the right amount (?),
-		//so I can can still get the correct time by moving the same amount
-		//in the opposite direction.
-		var inverseDate:Date = Date.fromTime(DateTools.makeUtc(
-											localDate.getFullYear(),
-											localDate.getMonth(),
-											localDate.getDate(),
-											localDate.getHours(),
-											localDate.getMinutes(),
-											localDate.getSeconds()));
-		
-		var offset:Float = inverseDate.getTime() - localDate.getTime();
-		var utcDate:Date = Date.fromTime(localDate.getTime() - offset);
-		
-		return DateTools.format(utcDate, "%Y-%m-%dT%H:%M:%SZ");
+		#if (js || flash || php || cpp)
+			//I must be using makeUtc() wrong, because it shifts the date in
+			//the wrong direction. However, it shifts it by the right amount,
+			//so I can can still get the correct time by moving the same amount
+			//in the opposite direction.
+			var inverseDate:Date = Date.fromTime(DateTools.makeUtc(
+												localDate.getFullYear(),
+												localDate.getMonth(),
+												localDate.getDate(),
+												localDate.getHours(),
+												localDate.getMinutes(),
+												localDate.getSeconds()));
+			
+			var offset:Float = inverseDate.getTime() - localDate.getTime();
+			var utcDate:Date = Date.fromTime(localDate.getTime() - offset);
+			
+			return DateTools.format(utcDate, "%Y-%m-%dT%H:%M:%SZ");
+		#else
+			//makeUtc() isn't supported for this target.
+			return DateTools.format(localDate, "%Y-%m-%dT%H:%M:%S");
+		#end
 	}
 }

@@ -25,15 +25,13 @@ import flash.events.Event;
 import flash.events.IOErrorEvent;
 import flash.Lib;
 import flash.Vector;
+import haxe.Json;
 import haxe.Timer;
 
 class RequestManager {
 	public var api:EventAPI;
 	
-	/**
-	 * Optional. Set this to supply properties to all events.
-	 */
-	public var commonProperties:Map<String, Dynamic>;
+	private var commonProperties:AnalyticsEvent;
 	
 	/**
 	 * The number of seconds between request attempts. It's safe to change
@@ -69,6 +67,10 @@ class RequestManager {
 	public function new(api:EventAPI, requestDelay:Float) {
 		this.api = api;
 		this.requestDelay = requestDelay;
+		
+		commonProperties = new AnalyticsEvent("");
+		commonProperties.removeProperty(AnalyticsEvent.EVENT_TIME);
+		
 		Lib.current.stage.addEventListener(Event.ENTER_FRAME, onEnterFrame);
 	}
 	
@@ -90,7 +92,8 @@ class RequestManager {
 	private function onEnterFrame(e:Event):Void {
 		var now:Float = Timer.stamp();
 		
-		if(now > lastRequestTime + requestDelay
+		if(api.hasQueuedEvents()
+				&& now > lastRequestTime + requestDelay
 				&& now > lastErrorTime + errorDelay
 				&& (!requestOngoing || now > lastRequestTime + 60)) {
 			requestOngoing = true;
@@ -98,6 +101,13 @@ class RequestManager {
 			
 			submitEvents();
 		}
+	}
+	
+	public inline function setCommonProperty(name:String, value:Dynamic):Void {
+		commonProperties.setProperty(name, value);
+	}
+	public inline function commonPropertiesToJSON():String {
+		return Json.stringify(commonProperties.properties);
 	}
 	
 	/**
@@ -109,7 +119,7 @@ class RequestManager {
 		//is the closest equivalent I could come up with.
 		var requestData:RequestData = new RequestData();
 		requestData.events = api.submitQueuedEvents(
-											commonProperties,
+											commonProperties.properties,
 											onSuccess,
 											null,
 											onError.bind(requestData));

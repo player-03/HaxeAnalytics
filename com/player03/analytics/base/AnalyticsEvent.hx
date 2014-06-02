@@ -39,6 +39,11 @@ class AnalyticsEvent {
 	 */
 	public var properties:Dynamic;
 	
+	/**
+	 * Used to track whether this event needs to be resubmitted.
+	 */
+	public var submittedSuccessfully:Bool = false;
+	
 	public function new(collectionName:String) {
 		this.collectionName = collectionName;
 		
@@ -55,10 +60,10 @@ class AnalyticsEvent {
 		Reflect.setField(properties, name, value);
 	}
 	
-	public function setProperties(newProperties:Map<String, Dynamic>, overwrite:Bool = false):Void {
-		for(name in newProperties.keys()) {
+	public function setProperties(newProperties:Dynamic, overwrite:Bool = false):Void {
+		for(name in Reflect.fields(newProperties)) {
 			if(overwrite || !Reflect.hasField(properties, name)) {
-				setProperty(name, newProperties.get(name));
+				setProperty(name, Reflect.field(newProperties, name));
 			}
 		}
 	}

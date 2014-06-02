@@ -65,7 +65,7 @@ class EventAPI {
 	 * @return The queued events, in case they need to be retried, or null
 	 * if there are no queued events.
 	 */
-	public function submitQueuedEvents(?commonProperties:Map<String, Dynamic>,
+	public function submitQueuedEvents(?commonProperties:Dynamic,
 									?onComplete:Event -> Void,
 									?onSecurityError:SecurityErrorEvent -> Void,
 									?onIOError:IOErrorEvent -> Void,
@@ -74,7 +74,21 @@ class EventAPI {
 			return null;
 		}
 		
-		//Apply the common properties to all events.
+		//Remove any events that have already been submitted.
+		for(queue in queues) {
+			var keepCount:Int = 0;
+			for(i in 0...queue.length) {
+				if(i != keepCount) {
+					queue[keepCount] = queue[i];
+				}
+				if(!queue[i].submittedSuccessfully) {
+					keepCount++;
+				}
+			}
+			queue.splice(keepCount, queue.length - keepCount);
+		}
+		
+		//Apply the common properties to all remaining events.
 		if(commonProperties != null) {
 			for(queue in queues) {
 				for(event in queue) {
@@ -92,24 +106,11 @@ class EventAPI {
 		var loader:URLLoader = new URLLoader();
 		loader.dataFormat = URLLoaderDataFormat.TEXT;
 		
-		loader.addEventListener(Event.COMPLETE, onComplete != null ? onComplete : defaultListener);
-		loader.addEventListener(HTTPStatusEvent.HTTP_STATUS, onStatus != null ? onStatus : defaultListener);
-		loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError != null ? onSecurityError : defaultListener);
-		loader.addEventListener(IOErrorEvent.IO_ERROR, onIOError != null ? onIOError : defaultListener);
-		
-		//Send the request.
-		#if cpp
-			cpp.vm.Thread.create(function():Void {
-				loader.load(request);
-			});
-		#else
-			loader.load(request);
-		#end
-		
-		//Store the return values before clearing the queue.
+		//Store the return values for later resubmission if necessary.
 		var flattenedQueue:Vector<AnalyticsEvent> = null;
 		for(queue in queues) {
-			//Reuse the first vector in the map as the vector to return.
+			//Reuse the first vector in the map, because the map is about
+			//to be disposed anyway.
 			if(flattenedQueue == null) {
 				flattenedQueue = queue;
 			} else {
@@ -118,6 +119,20 @@ class EventAPI {
 				}
 			}
 		}
+		
+		loader.addEventListener(Event.COMPLETE, successListener.bind(flattenedQueue, onComplete));
+		loader.addEventListener(HTTPStatusEvent.HTTP_STATUS, onStatus != null ? onStatus : defaultListener);
+		loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, onSecurityError != null ? onSecurityError : defaultListener);
+		loader.addEventListener(IOErrorEvent.IO_ERROR, onIOError != null ? onIOError : defaultListener);
+		
+		//Send the request.
+		#if cpp
+			//cpp.vm.Thread.create(function():Void {
+				loader.load(request);
+			//});
+		#else
+			loader.load(request);
+		#end
 		
 		clearQueuedEvents();
 		
@@ -140,6 +155,16 @@ class EventAPI {
 		eventsPending = 0;
 	}
 	
-	private function defaultListener(e:Event):Void {
+	private function defaultListener(e:Dynamic):Void {
+	}
+	
+	private function successListener(events:Vector<AnalyticsEvent>, listener:Dynamic -> Void, e:Dynamic):Void {
+		for(event in events) {
+			event.submittedSuccessfully = true;
+		}
+		
+		if(listener != null) {
+			listener(e);
+		}
 	}
 }
