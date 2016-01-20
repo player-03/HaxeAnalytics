@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
- package com.player03.analytics.base;
-import com.player03.analytics.Timestamp;
+package com.player03.analytics.base;
+
+import com.player03.analytics.ISODate;
 
 class AnalyticsEvent {
 	/**
@@ -49,7 +50,7 @@ class AnalyticsEvent {
 		
 		properties = { };
 		
-		setProperty(EVENT_TIME, Timestamp.now());
+		setProperty(EVENT_TIME, ISODate.now());
 	}
 	
 	public inline function getProperty(name:String):Dynamic {
