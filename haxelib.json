@@ -1,0 +1,11 @@
+{
+  "name": "haxe-analytics",
+  "url": "https://github.com/player-03/HaxeAnalytics",
+  "license": "Apache",
+  "description": "A simple API for Keen.io.",
+  "version": "1.0.0",
+  "releasenote": "Initial release.",
+  "contributors": [ "player_03" ],
+  "dependencies": {
+  }
+}
